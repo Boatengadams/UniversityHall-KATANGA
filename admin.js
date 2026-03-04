@@ -1678,8 +1678,15 @@ const renderAdminAccessStatus = () => {
   const staffRank = String(currentAdmin.staffRank || "").trim().toUpperCase();
   const claimsAdmin = currentAdmin.claimsAdmin === true;
   const claimsSuperAdmin = currentAdmin.claimsSuperAdmin === true;
+  const accessSource = currentAdmin.accessSource || "unknown";
+  const claimsSynced =
+    (role === "superAdmin" && claimsSuperAdmin) ||
+    (role === "admin" && claimsAdmin) ||
+    role === "scr" ||
+    role === "unknown";
   const rankText = staffRank ? ` | rank=${staffRank}` : "";
-  adminAccessStatus.textContent = `Access: role=${role}${rankText} | claims.admin=${claimsAdmin} | claims.superAdmin=${claimsSuperAdmin}`;
+  const syncText = claimsSynced ? "" : " | claims=out-of-sync";
+  adminAccessStatus.textContent = `Access: role=${role}${rankText} | via=${accessSource} | claims.admin=${claimsAdmin} | claims.superAdmin=${claimsSuperAdmin}${syncText}`;
 };
 
 const initAdmin = () => {
@@ -1727,11 +1734,24 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
+  const accessSource = claimsSuperAdmin
+    ? "claims.superAdmin"
+    : claimsAdmin
+      ? "claims.admin"
+      : roleSuperAdmin
+        ? "profile.role"
+        : isScrStaff
+          ? "profile.staffRank"
+          : roleAdmin
+            ? "profile.role"
+            : "unknown";
+
   currentAdmin = {
     uid: user.uid,
     email: user.email || "",
     ...data,
     role: isSuperAdmin ? "superAdmin" : (isScrStaff ? "scr" : "admin"),
+    accessSource,
     isAdmin: true,
     isSuperAdmin,
     claimsAdmin,

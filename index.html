@@ -3,29 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Annex lane 1 Login portal</title>
+  <title>EDUTEC | Access Portal</title>
   <link rel="icon" type="image/x-icon" href="Annex Katanga.ico">
   <link rel="stylesheet" href="styles.css">
 </head>
-
-<!--Body-->
-<body class="login-page">
+<body class="login-page saas-login">
   <div id="authToast" class="auth-toast" role="status" aria-live="polite"></div>
+
   <div class="video-bg" aria-hidden="true">
-    <video id="bgVideo" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback">
-      <source src="video/katvid.mp4" type="video/mp4">
-    </video>
+    <img id="bgVideo" src="video/katvid.gif" alt="">
   </div>
 
-  <div class="content">
-    <div class="hero">
-      <img class="logo" src="Images/katanga logo1.png" alt="Katanga Annex Lane One logo">
-      <p class="under">Katanga Annex Lane One</p>
-      <h1 class="h1">Welcome</h1>
-      <p class="h2">Secure student access portal</p>
-    </div>
+  <main class="content">
+    <section class="hero" aria-label="Marketing panel">
+      <div class="hero-top">
+        <img class="logo" src="Images/katanga logo1.png" alt="Katanga Annex Lane One logo">
+        <p class="under">Katanga Annex Lane One</p>
+      </div>
 
-    <div class="glass">
+      <div class="hero-copy">
+        <p class="eyebrow">Campus Operations Suite</p>
+        <h1 class="h1">One secure access point for students and staff</h1>
+        <p class="h2">Modern hall access, issue tracking, and approval workflows in one trusted platform.</p>
+      </div>
+
+      <div class="hero-metrics" aria-label="Platform metrics">
+        <article class="metric-card">
+          <span class="metric-value">24/7</span>
+          <span class="metric-label">Availability</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-value">120+</span>
+          <span class="metric-label">Rooms Managed</span>
+        </article>
+        <article class="metric-card">
+          <span class="metric-value">4 min</span>
+          <span class="metric-label">Avg. Response</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="glass" aria-label="Authentication card">
       <h2 class="login-title">Hall Access</h2>
 
       <div class="auth-toggle" role="tablist" aria-label="Authentication">
@@ -109,7 +127,7 @@
         <div class="form-field inline-field">
           <label>Password</label>
           <div class="password-wrap">
-            <input type="password" id="password" name="password" placeholder="••••••••" required minlength="6">
+            <input type="password" id="password" name="password" placeholder="********" required minlength="6">
             <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password" aria-pressed="false">Show</button>
           </div>
         </div>
@@ -117,9 +135,8 @@
         <input type="submit" id="authSubmit" value="Login">
       </form>
       <p class="auth-note" id="authMessage"></p>
-
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script src="sw-register.js" defer></script>
   <script type="module" src="script.js"></script>
