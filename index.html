@@ -3,121 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Annex lane 1 Login portal</title>
+  <title>KNUST University Hall Access</title>
   <link rel="icon" type="image/x-icon" href="Annex Katanga.ico">
   <link rel="stylesheet" href="styles.css">
 </head>
-
-<!--Body-->
 <body class="login-page">
   <div id="authToast" class="auth-toast" role="status" aria-live="polite"></div>
+
   <div class="video-bg" aria-hidden="true">
-    <video id="bgVideo" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback">
+    <video id="bgVideo" autoplay muted loop playsinline preload="auto">
       <source src="video/katvid.mp4" type="video/mp4">
     </video>
   </div>
 
   <div class="content">
     <div class="hero">
-      <img class="logo" src="Images/katanga logo1.png" alt="Katanga Annex Lane One logo">
-      <p class="under">Katanga Annex Lane One</p>
+      <img class="logo" src="Images/katanga-logo-transparent.png" alt="University Hall KNUST logo">
+      <p class="under">University Hall, KNUST</p>
       <h1 class="h1">Welcome</h1>
-      <p class="h2">Secure student access portal</p>
+      <p class="h2">Student and Staff Portal</p>
     </div>
 
     <div class="glass">
-      <h2 class="login-title">Hall Access</h2>
+      <div class="login-topbar">
+        <h2 class="login-title">Hall Access</h2>
+        <button type="button" id="themeToggle" class="theme-toggle">Dark Mode</button>
+      </div>
 
-      <div class="auth-toggle" role="tablist" aria-label="Authentication">
+      <div class="auth-toggle" role="tablist" aria-label="Authentication mode selector">
         <button class="auth-tab is-active" id="loginTab" type="button">Login</button>
         <button class="auth-tab" id="signupTab" type="button">Sign Up</button>
       </div>
 
-      <form id="loginForm">
+      <form id="loginForm" novalidate>
         <div id="signupFields" class="hidden">
           <div class="form-field">
-            <label>Name</label>
-            <input type="text" id="fullName" name="fullName" placeholder="Boateng Adams"
-                 autocomplete="name"
-                 pattern="[A-Za-z]+(?:[-'][A-Za-z]+)*(?:\s+[A-Za-z]+(?:[-'][A-Za-z]+)*)+"
-                 title="Enter at least two names. Hyphens/apostrophes allowed (e.g., Boateng Adams, Osei-Annan, O'Connor).">
+            <label for="fullName">Full Name</label>
+            <input class="ui-input" type="text" id="fullName" name="fullName" placeholder="Boateng Adams" autocomplete="name">
+            <small class="field-error" id="fullNameError"></small>
           </div>
+
           <div class="form-field">
-            <label>Register As</label>
-            <select id="registerRole" name="registerRole">
+            <label for="registerRole">Register As</label>
+            <select class="ui-select" id="registerRole" name="registerRole">
               <option value="student">Student</option>
               <option value="maintenance_technician">Maintenance Technician</option>
               <option value="staff">Staff</option>
             </select>
           </div>
+
           <div class="form-field">
-            <label id="studentIdLabel">Student ID</label>
-            <input type="text" id="studentId" name="studentId" placeholder="2500000001"
-                 inputmode="numeric"
-                 pattern="\d(?:[ -]?\d){9,}"
-                 title="Student ID should be at least 10 digits. Spaces or hyphens are not allowed.">
+            <label id="studentIdLabel" for="studentId">Student ID</label>
+            <input class="ui-input" type="text" id="studentId" name="studentId" placeholder="25000001" inputmode="numeric" maxlength="8">
+            <small class="field-error" id="studentIdError"></small>
           </div>
+
           <div class="form-field" id="maintenanceTypeWrap">
-            <label>Maintenance Type</label>
-            <select id="maintenanceType" name="maintenanceType">
-              <option value="">-- Select Type --</option>
+            <label for="maintenanceType">Maintenance Type</label>
+            <select class="ui-select" id="maintenanceType" name="maintenanceType">
+              <option value="">Select Type</option>
               <option value="electrician">Electrician</option>
               <option value="carpenter">Carpenter</option>
               <option value="plumber">Plumber</option>
             </select>
           </div>
+
           <div class="form-field" id="staffRankWrap">
-            <label>Staff Rank</label>
-            <select id="staffRank" name="staffRank">
-              <option value="">-- Select Rank --</option>
+            <label for="staffRank">Staff Rank</label>
+            <select class="ui-select" id="staffRank" name="staffRank">
+              <option value="">Select Rank</option>
               <option value="SCR">SCR</option>
               <option value="JCR">JCR</option>
               <option value="Porter">Porter</option>
             </select>
           </div>
-          <div class="form-field" id="locationAreaWrap">
-            <label>Area</label>
-            <select id="signupArea" name="signupArea">
-              <option value="">-- Select Area --</option>
-            </select>
+
+          <div class="form-field" id="wingWrap">
+            <label for="signupWing">Wing</label>
+            <select class="ui-select" id="signupWing" name="signupWing"></select>
+            <small class="field-error" id="wingError"></small>
           </div>
-          <div class="form-field" id="locationSubdivisionWrap">
-            <label>Subdivision</label>
-            <select id="signupSubdivision" name="signupSubdivision">
-              <option value="">-- Select Subdivision --</option>
-            </select>
+
+          <div class="form-field" id="laneWrap">
+            <label for="signupLane">Lane</label>
+            <select class="ui-select" id="signupLane" name="signupLane"></select>
+            <small class="field-error" id="laneError"></small>
           </div>
-          <div class="form-field">
-            <label>Room Number</label>
-            <select id="signupRoom" name="signupRoom">
-              <option value="">-- Select Room --</option>
-            </select>
+
+          <div class="form-field" id="roomWrap">
+            <label for="signupRoom">Room</label>
+            <select class="ui-select" id="signupRoom" name="signupRoom"></select>
+            <small class="field-error" id="roomError"></small>
           </div>
+
+          <div class="form-field" id="genderWrap">
+            <label for="signupGender">Gender (Auto)</label>
+            <input class="ui-input" type="text" id="signupGender" name="signupGender" readonly>
+          </div>
+
+          <div class="form-field" id="collegeWrap">
+            <label for="collegeInput">College</label>
+            <input class="ui-input" type="text" id="collegeInput" placeholder="Search college">
+            <input type="hidden" id="college" name="college">
+            <small class="field-error" id="collegeError"></small>
+          </div>
+
+          <div class="form-field" id="departmentWrap">
+            <label for="departmentInput">Department</label>
+            <input class="ui-input" type="text" id="departmentInput" placeholder="Search department">
+            <input type="hidden" id="department" name="department">
+            <small class="field-error" id="departmentError"></small>
+          </div>
+
           <div class="form-field" id="programWrap">
-            <label>Program of Study</label>
-            <input type="text" id="program" name="program" placeholder="Computer Science">
+            <label for="programInput">Program</label>
+            <input class="ui-input" type="text" id="programInput" placeholder="Search program">
+            <input type="hidden" id="program" name="program">
+            <small class="field-error" id="programError"></small>
           </div>
         </div>
 
         <div class="form-field inline-field">
-          <label>Email</label>
-          <input type="email" id="email" name="email" placeholder="name@st.knust.edu.gh" required autocomplete="email"
-                 autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"
-                 title="Enter your login email. Student sign up requires KNUST email format.">
+          <label for="email">Email</label>
+          <input class="ui-input" type="email" id="email" name="email" placeholder="adams@st.knust.edu.gh" required autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
+          <small class="field-error" id="emailError"></small>
         </div>
 
         <div class="form-field inline-field">
-          <label>Password</label>
+          <label for="password">Password</label>
           <div class="password-wrap">
-            <input type="password" id="password" name="password" placeholder="••••••••" required minlength="6">
+            <input class="ui-input" type="password" id="password" name="password" placeholder="Enter your password" required minlength="8">
             <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password" aria-pressed="false">Show</button>
           </div>
+          <small class="field-error" id="passwordError"></small>
+        </div>
+
+        <div class="form-field inline-field" id="confirmPasswordWrap">
+          <label for="confirmPassword">Confirm Password</label>
+          <input class="ui-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password">
+          <small class="field-error" id="confirmPasswordError"></small>
         </div>
 
         <input type="submit" id="authSubmit" value="Login">
       </form>
-      <p class="auth-note" id="authMessage"></p>
 
+      <p class="auth-note" id="authMessage"></p>
     </div>
   </div>
 

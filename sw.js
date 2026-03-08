@@ -1,4 +1,4 @@
-const STATIC_CACHE = "edutec-static-v4";
+const STATIC_CACHE = "edutec-static-v5";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -14,26 +14,28 @@ const SHELL_FILES = [
   "./admin-fault.html",
   "./admin-fault.js",
   "./Annex%20Katanga.ico",
-  "./Images/katanga%20logo1.png",
-  "./Images/faultybulb.png"
+  "./Images/katanga-logo-transparent.png",
+  "./Images/faultybulb.png",
+  "./app/lib/catalogs.js",
+  "./app/utils/validation.js",
+  "./app/services/authService.js",
+  "./app/services/profileService.js",
+  "./app/components/searchableSelect.js",
+  "./app/hooks/useTheme.js"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(SHELL_FILES))
-  );
+  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(SHELL_FILES)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== STATIC_CACHE)
-          .map((key) => caches.delete(key))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key)))
       )
-    )
   );
   self.clients.claim();
 });
@@ -60,21 +62,6 @@ self.addEventListener("fetch", (event) => {
 
   const cacheableDestinations = new Set(["script", "style", "image", "font", "document"]);
   if (!cacheableDestinations.has(request.destination)) return;
-
-  if (request.destination === "script" || request.destination === "style") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

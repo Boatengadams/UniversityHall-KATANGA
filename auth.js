@@ -1,15 +1,29 @@
-import { auth, db } from "./firebase.js";
+import { auth } from "./firebase.js";
+import { serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+  COLLEGE_TREE,
+  TECHNICIAN_FAULTS,
+  STUDENT_EMAIL_REGEX,
+  WING_CONFIG,
+  getGenderByWing,
+  getLaneOptions,
+  getRoomOptions,
+  getWingOptions
+} from "./app/lib/catalogs.js";
 import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+  sanitizeName,
+  sanitizeStudentId,
+  validateConfirmPassword,
+  validateEmail,
+  validateName,
+  validatePassword,
+  validateStudentEmail,
+  validateStudentId
+} from "./app/utils/validation.js";
+import { wireSearchableInput } from "./app/components/searchableSelect.js";
+import { registerWithEmailPassword, loginWithEmailPassword, getTokenClaims } from "./app/services/authService.js";
+import { getUserProfile, saveUserProfile } from "./app/services/profileService.js";
+import { initTheme } from "./app/hooks/useTheme.js";
 
 const loginForm = document.getElementById("loginForm");
 const authCard = document.querySelector(".glass");
@@ -19,305 +33,278 @@ const signupFields = document.getElementById("signupFields");
 const authSubmit = document.getElementById("authSubmit");
 const authMessage = document.getElementById("authMessage");
 const authToast = document.getElementById("authToast");
-const email = document.getElementById("email");
-const password = document.getElementById("password");
-const passwordToggle = document.getElementById("passwordToggle");
+const themeToggle = document.getElementById("themeToggle");
+
 const fullName = document.getElementById("fullName");
+const registerRole = document.getElementById("registerRole");
 const studentId = document.getElementById("studentId");
 const studentIdLabel = document.getElementById("studentIdLabel");
-const signupRoom = document.getElementById("signupRoom");
-const program = document.getElementById("program");
-const registerRole = document.getElementById("registerRole");
 const maintenanceType = document.getElementById("maintenanceType");
 const staffRank = document.getElementById("staffRank");
-const signupArea = document.getElementById("signupArea");
-const signupSubdivision = document.getElementById("signupSubdivision");
+const wing = document.getElementById("signupWing");
+const lane = document.getElementById("signupLane");
+const room = document.getElementById("signupRoom");
+const gender = document.getElementById("signupGender");
+
+const collegeInput = document.getElementById("collegeInput");
+const departmentInput = document.getElementById("departmentInput");
+const programInput = document.getElementById("programInput");
+const college = document.getElementById("college");
+const department = document.getElementById("department");
+const program = document.getElementById("program");
+
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const confirmPassword = document.getElementById("confirmPassword");
+const passwordToggle = document.getElementById("passwordToggle");
+
 const maintenanceTypeWrap = document.getElementById("maintenanceTypeWrap");
 const staffRankWrap = document.getElementById("staffRankWrap");
-const locationAreaWrap = document.getElementById("locationAreaWrap");
-const locationSubdivisionWrap = document.getElementById("locationSubdivisionWrap");
+const wingWrap = document.getElementById("wingWrap");
+const laneWrap = document.getElementById("laneWrap");
+const roomWrap = document.getElementById("roomWrap");
+const genderWrap = document.getElementById("genderWrap");
+const collegeWrap = document.getElementById("collegeWrap");
+const departmentWrap = document.getElementById("departmentWrap");
 const programWrap = document.getElementById("programWrap");
+const confirmPasswordWrap = document.getElementById("confirmPasswordWrap");
 
 let mode = "login";
 let toastTimer = null;
 let submitBusyStartedAt = 0;
-const MIN_SUBMIT_BUSY_MS = 850;
-const studentEmailRegex = /^[A-Za-z0-9._%+-]+@st\.knust\.edu\.gh$/;
-const studentEmailPattern = "^[A-Za-z0-9._%+-]+@st\\.knust\\.edu\\.gh$";
 
-const LOCATION_STRUCTURE = {
-  annex: {
-    label: "Annex",
-    subdivisions: {
-      "ground-floor": "Ground Floor",
-      "lane-1": "Lane 1",
-      "lane-2": "Lane 2",
-      "lane-3": "Lane 3",
-      "lane-4": "Lane 4",
-      "lane-5": "Lane 5",
-      "lane-6": "Lane 6",
-      "lane-7": "Lane 7",
-      "lane-8": "Lane 8"
-    }
-  },
-  "east-wing": {
-    label: "East Wing",
-    subdivisions: {
-      "lane-1": "Lane 1",
-      "lane-2": "Lane 2",
-      "lane-3": "Lane 3"
-    }
-  },
-  "west-wing": {
-    label: "West Wing",
-    subdivisions: {
-      "lane-1": "Lane 1",
-      "lane-2": "Lane 2",
-      "lane-3": "Lane 3"
-    }
-  },
-  bridge: {
-    label: "Bridge",
-    subdivisions: {
-      upper: "Upper Bridge",
-      lower: "Lower Bridge"
-    }
-  }
+const RATE_LIMIT_KEY = "authRateLimit";
+const MIN_SUBMIT_BUSY_MS = 800;
+
+const FIELD_ERROR_IDS = {
+  fullName: "fullNameError",
+  studentId: "studentIdError",
+  email: "emailError",
+  password: "passwordError",
+  confirmPassword: "confirmPasswordError",
+  wing: "wingError",
+  lane: "laneError",
+  room: "roomError",
+  college: "collegeError",
+  department: "departmentError",
+  program: "programError"
 };
 
-const TECHNICIAN_FAULTS = {
-  electrician: ["Faulty Bulb", "Faulty Fan", "Fan Regulator", "Socket"],
-  carpenter: ["Broken Shelves", "Door Lock Fault", "Broken Louvers", "Broken Bed"],
-  plumber: ["Drainages"]
+const getFieldErrorNode = (fieldKey) => document.getElementById(FIELD_ERROR_IDS[fieldKey]);
+
+const setFieldError = (fieldKey, message = "") => {
+  const node = getFieldErrorNode(fieldKey);
+  if (!node) return;
+  node.textContent = message;
+};
+
+const clearFieldErrors = () => {
+  Object.keys(FIELD_ERROR_IDS).forEach((key) => setFieldError(key, ""));
 };
 
 const clearAuthForm = () => {
-  if (fullName) fullName.value = "";
-  if (studentId) studentId.value = "";
-  if (signupRoom) signupRoom.value = "";
-  if (program) program.value = "";
-  if (email) email.value = "";
-  if (password) password.value = "";
+  loginForm.reset();
+  college.value = "";
+  department.value = "";
+  program.value = "";
   if (registerRole) registerRole.value = "student";
-  if (maintenanceType) maintenanceType.value = "";
-  if (staffRank) staffRank.value = "";
-  if (signupArea) signupArea.value = "";
-  if (signupSubdivision) signupSubdivision.value = "";
-  updateRoleFields();
-};
-
-const RATE_LIMIT_KEY = "authRateLimit";
-const isRateLimited = () => {
-  const now = Date.now();
-  const windowMs = 60 * 1000;
-  const limit = 3;
-  const raw = sessionStorage.getItem(RATE_LIMIT_KEY);
-  const attempts = raw ? JSON.parse(raw) : [];
-  const recent = attempts.filter((ts) => now - ts < windowMs);
-  recent.push(now);
-  sessionStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(recent));
-  return recent.length > limit;
+  populateWingOptions();
+  populateLaneOptions();
+  populateRoomOptions();
+  syncGender();
+  setMode(mode);
+  clearFieldErrors();
 };
 
 const showAuthToast = (message) => {
   if (!authToast || !message) return;
   authToast.textContent = message;
   authToast.classList.add("is-visible");
-  if (toastTimer) {
-    clearTimeout(toastTimer);
-  }
-  toastTimer = window.setTimeout(() => {
-    authToast.classList.remove("is-visible");
-  }, 6500);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => authToast.classList.remove("is-visible"), 5000);
+};
+
+const isRateLimited = () => {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const limit = 5;
+  const raw = sessionStorage.getItem(RATE_LIMIT_KEY);
+  const attempts = raw ? JSON.parse(raw) : [];
+  const recent = attempts.filter((timestamp) => now - timestamp < windowMs);
+  recent.push(now);
+  sessionStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(recent));
+  return recent.length > limit;
 };
 
 const setSubmitBusy = (busy) => {
   if (!authSubmit) return;
-  if (loginTab) loginTab.disabled = busy;
-  if (signupTab) signupTab.disabled = busy;
-  if (passwordToggle) passwordToggle.disabled = busy;
   authSubmit.disabled = busy;
-  if (!busy) {
-    authSubmit.value = mode === "signup" ? "Create Account" : "Login";
+  loginTab.disabled = busy;
+  signupTab.disabled = busy;
+  passwordToggle.disabled = busy;
+
+  if (busy) {
+    submitBusyStartedAt = Date.now();
+    authSubmit.value = mode === "signup" ? "Creating Account..." : "Signing In...";
     return;
   }
-  submitBusyStartedAt = Date.now();
-  authSubmit.value = mode === "signup" ? "Creating account..." : "Logging in...";
+
+  authSubmit.value = mode === "signup" ? "Create Account" : "Login";
 };
 
 const releaseSubmitBusy = async () => {
   const elapsed = Date.now() - submitBusyStartedAt;
   const remaining = MIN_SUBMIT_BUSY_MS - elapsed;
   if (remaining > 0) {
-    await new Promise((resolve) => window.setTimeout(resolve, remaining));
+    await new Promise((resolve) => setTimeout(resolve, remaining));
   }
   setSubmitBusy(false);
 };
 
-const parseLaneNumber = (subdivisionKey) => {
-  const match = String(subdivisionKey || "").match(/^lane-(\d+)$/);
-  return match ? Number(match[1]) : null;
-};
-
-const buildRoomRange = (start, end) => {
-  const rows = [];
-  for (let value = start; value <= end; value += 1) {
-    rows.push(`Room ${value}`);
-  }
-  return rows;
-};
-
-const getRoomsForLocation = (areaKey, subdivisionKey) => {
-  if (!areaKey || !subdivisionKey) return [];
-
-  if (areaKey === "annex") {
-    if (subdivisionKey === "ground-floor") {
-      return buildRoomRange(1, 12);
-    }
-    const lane = parseLaneNumber(subdivisionKey);
-    if (lane && lane >= 1 && lane <= 8) {
-      const start = ((lane - 1) * 12) + 1;
-      return buildRoomRange(start, start + 11);
-    }
-  }
-
-  if (areaKey === "east-wing" || areaKey === "west-wing") {
-    const lane = parseLaneNumber(subdivisionKey);
-    if (lane && lane >= 1 && lane <= 3) {
-      return buildRoomRange(1, 32);
-    }
-  }
-
-  if (areaKey === "bridge" && (subdivisionKey === "upper" || subdivisionKey === "lower")) {
-    return buildRoomRange(1, 24);
-  }
-
-  return [];
-};
-
-const populateAreaOptions = () => {
-  if (!signupArea) return;
-  const options = Object.entries(LOCATION_STRUCTURE)
-    .map(([value, item]) => `<option value="${value}">${item.label}</option>`)
+const populateWingOptions = () => {
+  const wingOptions = getWingOptions();
+  wing.innerHTML = '<option value="">Select Wing</option>' + wingOptions
+    .map((item) => `<option value="${item.value}">${item.label}</option>`)
     .join("");
-  signupArea.innerHTML = `<option value="">-- Select Area --</option>${options}`;
 };
 
-const populateSubdivisionOptions = () => {
-  if (!signupSubdivision || !signupArea) return;
-  const areaConfig = LOCATION_STRUCTURE[signupArea.value];
-  if (!areaConfig) {
-    signupSubdivision.innerHTML = '<option value="">-- Select Subdivision --</option>';
-    return;
-  }
-
-  const options = Object.entries(areaConfig.subdivisions)
-    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+const populateLaneOptions = () => {
+  const laneOptions = getLaneOptions(wing.value);
+  lane.innerHTML = '<option value="">Select Lane</option>' + laneOptions
+    .map((value) => `<option value="${value}">${value}</option>`)
     .join("");
-  signupSubdivision.innerHTML = `<option value="">-- Select Subdivision --</option>${options}`;
 };
 
 const populateRoomOptions = () => {
-  if (!signupRoom || !signupArea || !signupSubdivision) return;
-  const rooms = getRoomsForLocation(signupArea.value, signupSubdivision.value);
-  if (!rooms.length) {
-    signupRoom.innerHTML = '<option value="">-- Select Room --</option>';
-    return;
+  const roomOptions = getRoomOptions(wing.value, lane.value);
+  room.innerHTML = '<option value="">Select Room</option>' + roomOptions
+    .map((value) => `<option value="${value}">${value}</option>`)
+    .join("");
+};
+
+const syncGender = () => {
+  gender.value = getGenderByWing(wing.value);
+};
+
+const isStudentRole = () => registerRole?.value === "student";
+const isTechnicianRole = () => registerRole?.value === "maintenance_technician";
+const isStaffRole = () => registerRole?.value === "staff";
+
+const validateBaseFields = () => {
+  let valid = true;
+
+  if (mode === "signup") {
+    const nameError = validateName(fullName.value);
+    setFieldError("fullName", nameError);
+    if (nameError) valid = false;
+
+    const idError = isStudentRole()
+      ? validateStudentId(studentId.value)
+      : studentId.value.trim()
+        ? ""
+        : "ID number is required.";
+    setFieldError("studentId", idError);
+    if (idError) valid = false;
+
+    const confirmError = validateConfirmPassword(password.value, confirmPassword.value);
+    setFieldError("confirmPassword", confirmError);
+    if (confirmError) valid = false;
   }
 
-  signupRoom.innerHTML = `<option value="">-- Select Room --</option>${rooms
-    .map((value) => `<option>${value}</option>`)
-    .join("")}`;
+  const emailError = validateEmail(email.value);
+  setFieldError("email", emailError);
+  if (emailError) valid = false;
+
+  if (mode === "signup" && isStudentRole()) {
+    const studentEmailError = validateStudentEmail(email.value);
+    if (studentEmailError) {
+      setFieldError("email", studentEmailError);
+      valid = false;
+    }
+  }
+
+  const passwordError = validatePassword(password.value);
+  setFieldError("password", passwordError);
+  if (passwordError) valid = false;
+
+  if (mode === "signup" && isStudentRole()) {
+    if (!wing.value) {
+      setFieldError("wing", "Wing is required.");
+      valid = false;
+    }
+    if (!lane.value) {
+      setFieldError("lane", "Lane is required.");
+      valid = false;
+    }
+    if (!room.value) {
+      setFieldError("room", "Room is required.");
+      valid = false;
+    }
+    if (!college.value) {
+      setFieldError("college", "Please select a valid college.");
+      valid = false;
+    }
+    if (!department.value) {
+      setFieldError("department", "Please select a valid department.");
+      valid = false;
+    }
+    if (!program.value) {
+      setFieldError("program", "Please select a valid program.");
+      valid = false;
+    }
+  }
+
+  return valid;
 };
 
 const updateRoleFields = () => {
-  if (!registerRole) return;
+  const student = isStudentRole();
+  const technician = isTechnicianRole();
+  const staff = isStaffRole();
 
-  const role = registerRole.value;
-  const isStudent = role === "student";
-  const isTechnician = role === "maintenance_technician";
-  const isStaff = role === "staff";
+  maintenanceTypeWrap.classList.toggle("hidden", !technician);
+  staffRankWrap.classList.toggle("hidden", !staff);
 
-  if (maintenanceTypeWrap) maintenanceTypeWrap.classList.toggle("hidden", !isTechnician);
-  if (staffRankWrap) staffRankWrap.classList.toggle("hidden", !isStaff);
-  if (locationAreaWrap) locationAreaWrap.classList.toggle("hidden", !isStudent);
-  if (locationSubdivisionWrap) locationSubdivisionWrap.classList.toggle("hidden", !isStudent);
-  if (signupRoom?.closest(".form-field")) signupRoom.closest(".form-field").classList.toggle("hidden", !isStudent);
-  if (programWrap) programWrap.classList.toggle("hidden", !isStudent);
+  wingWrap.classList.toggle("hidden", !student);
+  laneWrap.classList.toggle("hidden", !student);
+  roomWrap.classList.toggle("hidden", !student);
+  genderWrap.classList.toggle("hidden", !student);
+  collegeWrap.classList.toggle("hidden", !student);
+  departmentWrap.classList.toggle("hidden", !student);
+  programWrap.classList.toggle("hidden", !student);
 
-  if (studentIdLabel) {
-    studentIdLabel.textContent = isStudent ? "Student ID" : "ID Number";
-  }
-  if (studentId) {
-    studentId.placeholder = isStudent ? "2500000001" : "Enter ID number";
-  }
+  studentIdLabel.textContent = student ? "Student ID" : "ID Number";
+  studentId.placeholder = student ? "25000001" : "Enter ID number";
 
-  if (email) {
-    if (mode === "signup" && isStudent) {
-      email.setAttribute("pattern", studentEmailPattern);
-      email.setAttribute("title", "Use your KNUST student email in the format name@st.knust.edu.gh");
-      email.setAttribute("placeholder", "name@st.knust.edu.gh");
-    } else if (mode === "signup") {
-      email.removeAttribute("pattern");
-      email.setAttribute("title", "Enter your registration email.");
-      email.setAttribute("placeholder", "name@example.com");
-    }
+  if (mode === "signup" && student) {
+    email.placeholder = "adams@st.knust.edu.gh";
+  } else {
+    email.placeholder = "name@example.com";
   }
 };
 
-const setMode = (next) => {
-  mode = next;
-  const isSignup = mode === "signup";
-  signupFields.classList.toggle("hidden", !isSignup);
-  loginForm.classList.toggle("is-signup", isSignup);
-  if (authCard) authCard.classList.toggle("is-signup-mode", isSignup);
-  loginTab.classList.toggle("is-active", !isSignup);
-  signupTab.classList.toggle("is-active", isSignup);
-  if (!authSubmit.disabled) {
-    authSubmit.value = isSignup ? "Create Account" : "Login";
-  }
+const setMode = (nextMode) => {
+  mode = nextMode;
+  const signupMode = mode === "signup";
 
-  if (email) {
-    if (!isSignup) {
-      email.removeAttribute("pattern");
-      email.setAttribute("title", "Enter your login email.");
-      email.setAttribute("placeholder", "Enter email");
-    }
-  }
+  signupFields.classList.toggle("hidden", !signupMode);
+  loginForm.classList.toggle("is-signup", signupMode);
+  authCard.classList.toggle("is-signup-mode", signupMode);
+
+  loginTab.classList.toggle("is-active", !signupMode);
+  signupTab.classList.toggle("is-active", signupMode);
+
+  authSubmit.value = signupMode ? "Create Account" : "Login";
+  confirmPasswordWrap.classList.toggle("hidden", !signupMode);
 
   updateRoleFields();
+  clearFieldErrors();
   authMessage.textContent = "";
+
+  if (!signupMode) {
+    email.placeholder = "adams@st.knust.edu.gh";
+  }
 };
-
-if (loginTab && signupTab) {
-  loginTab.addEventListener("click", () => setMode("login"));
-  signupTab.addEventListener("click", () => setMode("signup"));
-}
-
-if (registerRole) {
-  registerRole.addEventListener("change", updateRoleFields);
-}
-
-if (signupArea) {
-  signupArea.addEventListener("change", () => {
-    populateSubdivisionOptions();
-    populateRoomOptions();
-  });
-}
-
-if (signupSubdivision) {
-  signupSubdivision.addEventListener("change", populateRoomOptions);
-}
-
-if (password && passwordToggle) {
-  passwordToggle.addEventListener("click", () => {
-    const showing = password.type === "text";
-    password.type = showing ? "password" : "text";
-    passwordToggle.textContent = showing ? "Show" : "Hide";
-    passwordToggle.setAttribute("aria-label", showing ? "Show password" : "Hide password");
-    passwordToggle.setAttribute("aria-pressed", showing ? "false" : "true");
-  });
-}
 
 const resolveRoleRedirect = (profile) => {
   const role = String(profile?.role || "").trim().toLowerCase();
@@ -326,40 +313,156 @@ const resolveRoleRedirect = (profile) => {
   return "Lane1annexkatanga.html";
 };
 
+const collegeValues = Object.keys(COLLEGE_TREE);
+const syncCollegeOptions = wireSearchableInput({
+  input: collegeInput,
+  hidden: college,
+  listId: "collegeList",
+  values: collegeValues,
+  placeholder: "Search college"
+});
+
+const syncDepartmentOptions = wireSearchableInput({
+  input: departmentInput,
+  hidden: department,
+  listId: "departmentList",
+  values: [],
+  placeholder: "Search department"
+});
+
+const syncProgramOptions = wireSearchableInput({
+  input: programInput,
+  hidden: program,
+  listId: "programList",
+  values: [],
+  placeholder: "Search program"
+});
+
+const hydrateAcademicHierarchy = () => {
+  const selectedCollege = college.value;
+  const departments = selectedCollege ? Object.keys(COLLEGE_TREE[selectedCollege] || {}) : [];
+
+  if (!departments.includes(department.value)) {
+    department.value = "";
+    departmentInput.value = "";
+  }
+
+  syncDepartmentOptions(departments);
+
+  const programs = selectedCollege && department.value
+    ? COLLEGE_TREE[selectedCollege]?.[department.value] || []
+    : [];
+
+  if (!programs.includes(program.value)) {
+    program.value = "";
+    programInput.value = "";
+  }
+
+  syncProgramOptions(programs);
+};
+
+collegeInput.addEventListener("change", () => {
+  setFieldError("college", "");
+  hydrateAcademicHierarchy();
+});
+
+departmentInput.addEventListener("change", () => {
+  setFieldError("department", "");
+  hydrateAcademicHierarchy();
+});
+
+programInput.addEventListener("change", () => setFieldError("program", ""));
+
+if (loginTab && signupTab) {
+  loginTab.addEventListener("click", () => setMode("login"));
+  signupTab.addEventListener("click", () => setMode("signup"));
+}
+
+registerRole.addEventListener("change", () => {
+  updateRoleFields();
+  clearFieldErrors();
+});
+
+wing.addEventListener("change", () => {
+  populateLaneOptions();
+  populateRoomOptions();
+  syncGender();
+  setFieldError("wing", "");
+});
+
+lane.addEventListener("change", () => {
+  populateRoomOptions();
+  setFieldError("lane", "");
+});
+
+room.addEventListener("change", () => setFieldError("room", ""));
+
+if (password && passwordToggle) {
+  passwordToggle.addEventListener("click", () => {
+    const isText = password.type === "text";
+    const nextType = isText ? "password" : "text";
+    password.type = nextType;
+    if (confirmPassword) confirmPassword.type = nextType;
+    passwordToggle.textContent = isText ? "Show" : "Hide";
+    passwordToggle.setAttribute("aria-pressed", String(!isText));
+  });
+}
+
+fullName.addEventListener("input", () => {
+  fullName.value = sanitizeName(fullName.value);
+  setFieldError("fullName", validateName(fullName.value));
+});
+
+studentId.addEventListener("input", () => {
+  if (mode === "signup" && isStudentRole()) {
+    studentId.value = sanitizeStudentId(studentId.value);
+    setFieldError("studentId", validateStudentId(studentId.value));
+    return;
+  }
+
+  setFieldError("studentId", studentId.value.trim() ? "" : "ID number is required.");
+});
+
+email.addEventListener("input", () => {
+  const baseError = validateEmail(email.value);
+  let nextError = baseError;
+  if (!baseError && mode === "signup" && isStudentRole()) {
+    nextError = validateStudentEmail(email.value);
+  }
+  setFieldError("email", nextError);
+});
+
+password.addEventListener("input", () => {
+  setFieldError("password", validatePassword(password.value));
+  if (mode === "signup") {
+    setFieldError("confirmPassword", validateConfirmPassword(password.value, confirmPassword.value));
+  }
+});
+
+confirmPassword.addEventListener("input", () => {
+  setFieldError("confirmPassword", validateConfirmPassword(password.value, confirmPassword.value));
+});
+
 if (loginForm) {
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
     authMessage.textContent = "";
-    authMessage.style.color = "";
+    clearFieldErrors();
+
     if (isRateLimited()) {
-      authMessage.textContent = "Too many attempts. Please wait a minute.";
+      authMessage.textContent = "Too many attempts. Please wait a minute before trying again.";
       return;
     }
 
+    if (!validateBaseFields()) return;
+
     setSubmitBusy(true);
+
     try {
       const normalizedEmail = email.value.trim().toLowerCase();
-      if (mode === "signup") {
-        const role = registerRole?.value || "student";
-        if (!fullName.value.trim() || !studentId.value.trim()) {
-          authMessage.textContent = "Please enter your name and ID number.";
-          return;
-        }
 
-        if (role === "student") {
-          if (!studentEmailRegex.test(normalizedEmail)) {
-            authMessage.textContent = "Use your KNUST email: name@st.knust.edu.gh";
-            return;
-          }
-          if (!signupArea.value || !signupSubdivision.value || !signupRoom.value) {
-            authMessage.textContent = "Please select area, subdivision, and room.";
-            return;
-          }
-          if (!program.value.trim()) {
-            authMessage.textContent = "Please enter your program of study.";
-            return;
-          }
-        }
+      if (mode === "signup") {
+        const role = registerRole.value;
 
         if (role === "maintenance_technician" && !maintenanceType.value) {
           authMessage.textContent = "Please select maintenance type.";
@@ -371,104 +474,105 @@ if (loginForm) {
           return;
         }
 
-        const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, password.value);
-        await updateProfile(cred.user, { displayName: fullName.value.trim() });
-
-        const profile = {
-          name: fullName.value.trim(),
-          idNumber: studentId.value.trim(),
-          login: normalizedEmail,
+        const credential = await registerWithEmailPassword({
           email: normalizedEmail,
+          password: password.value,
+          name: fullName.value.trim()
+        });
+
+        const userPayload = {
+          name: fullName.value.trim(),
+          email: normalizedEmail,
+          login: normalizedEmail,
           role,
           approved: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          idNumber: studentId.value,
+          studentId: studentId.value,
+          createdAt: serverTimestamp()
         };
 
         if (role === "student") {
-          profile.studentId = studentId.value.trim();
-          profile.program = program.value.trim();
-          profile.area = signupArea.value;
-          profile.areaLabel = LOCATION_STRUCTURE[signupArea.value]?.label || "";
-          profile.subdivision = signupSubdivision.value;
-          profile.subdivisionLabel = LOCATION_STRUCTURE[signupArea.value]?.subdivisions?.[signupSubdivision.value] || "";
-          profile.room = signupRoom.value;
-          profile.locationText = `${profile.areaLabel} ${profile.subdivisionLabel} ${profile.room}`.trim();
+          const wingLabel = WING_CONFIG[wing.value]?.label || "";
+          userPayload.wing = wing.value;
+          userPayload.wingLabel = wingLabel;
+          userPayload.lane = lane.value;
+          userPayload.laneLabel = lane.value;
+          userPayload.room = room.value;
+          userPayload.gender = gender.value;
+          userPayload.college = college.value;
+          userPayload.department = department.value;
+          userPayload.program = program.value;
+
+          userPayload.area = wing.value;
+          userPayload.areaLabel = wingLabel;
+          userPayload.subdivision = lane.value.toLowerCase().replace(/\s+/g, "-");
+          userPayload.subdivisionLabel = lane.value;
+          userPayload.locationText = `${wingLabel} ${lane.value} ${room.value}`.trim();
         }
 
         if (role === "maintenance_technician") {
           const type = maintenanceType.value;
-          profile.maintenanceType = type;
-          profile.maintenanceLabel = type.charAt(0).toUpperCase() + type.slice(1);
-          profile.allowedFaultTypes = TECHNICIAN_FAULTS[type] || [];
+          userPayload.maintenanceType = type;
+          userPayload.maintenanceLabel = type.charAt(0).toUpperCase() + type.slice(1);
+          userPayload.allowedFaultTypes = TECHNICIAN_FAULTS[type] || [];
         }
 
         if (role === "staff") {
-          profile.staffRank = staffRank.value;
+          userPayload.staffRank = staffRank.value;
         }
 
-        await setDoc(doc(db, "users", cred.user.uid), profile, { merge: true });
+        await saveUserProfile(credential.user.uid, userPayload);
 
-        showAuthToast("Account created successfully. It is waiting for admin approval. Please wait for confirmation before login.");
+        showAuthToast("Account created successfully and pending administrator approval.");
         clearAuthForm();
+        setMode("login");
         return;
       }
 
-      const loginEmail = normalizedEmail;
-      const loginPassword = password.value;
-      const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      const tokenPromise = cred.user.getIdTokenResult(true);
-      const profilePromise = getDoc(doc(db, "users", cred.user.uid));
-      const token = await tokenPromise;
-      const isAdmin = token.claims.admin === true;
-      const isSuperAdmin = token.claims.superAdmin === true;
+      const credential = await loginWithEmailPassword({
+        email: normalizedEmail,
+        password: password.value
+      });
 
-      if (isAdmin || isSuperAdmin) {
-        clearAuthForm();
+      const claims = await getTokenClaims(credential.user);
+      if (claims.admin === true || claims.superAdmin === true) {
         window.location.href = "admin.html";
         return;
       }
 
-      const snap = await profilePromise;
-      if (!snap.exists()) {
+      const profile = await getUserProfile(credential.user.uid);
+      if (!profile) {
         authMessage.textContent = "Account not found. Please sign up.";
         return;
       }
-      const profile = snap.data();
-      const role = String(profile.role || "").trim().toLowerCase();
-      const isRoleAdmin =
-        role === "admin" ||
-        role === "administrator" ||
-        role === "super admin" ||
-        role === "super_admin" ||
-        role === "superadmin";
-      if (isRoleAdmin) {
-        clearAuthForm();
-        window.location.href = "admin.html";
-        return;
-      }
+
       if (!profile.approved) {
-        authMessage.textContent = "Your account is pending approval. Please check back shortly.";
+        authMessage.textContent = "Your account is pending approval. Please check again later.";
         return;
       }
 
-      clearAuthForm();
       window.location.href = resolveRoleRedirect(profile);
-    } catch (err) {
-      const code = err?.code || "";
-      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+    } catch (error) {
+      const code = error?.code || "";
+      if (
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password" ||
+        code === "auth/user-not-found"
+      ) {
         authMessage.textContent = "Incorrect email or password.";
       } else {
-        authMessage.textContent = err?.message || "Authentication failed.";
+        authMessage.textContent = error?.message || "Authentication failed.";
       }
-      authMessage.style.color = "";
     } finally {
       await releaseSubmitBusy();
     }
   });
 }
 
-populateAreaOptions();
-populateSubdivisionOptions();
+initTheme(themeToggle);
+populateWingOptions();
+populateLaneOptions();
 populateRoomOptions();
+syncGender();
+hydrateAcademicHierarchy();
 setMode("login");

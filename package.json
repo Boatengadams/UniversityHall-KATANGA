@@ -1,4 +1,14 @@
 {
+  "name": "edutec-university-hall-management",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "lint:js": "node --check auth.js && node --check script.js && node --check admin.js && node --check maintenance.js && node --check staff.js",
+    "lint:functions": "npm --prefix functions run lint",
+    "lint": "npm run lint:js && npm run lint:functions",
+    "serve": "firebase emulators:start",
+    "deploy": "firebase deploy"
+  },
   "dependencies": {
     "-": "^0.0.1",
     "firebase-tools": "^15.7.0",

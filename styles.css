@@ -2234,7 +2234,7 @@ span {
   content: "";
   position: fixed;
   inset: 0;
-  background: url("Images/katanga logo1.png") center/62vmin no-repeat;
+  background: url("Images/katanga-logo-transparent.png") center/62vmin no-repeat;
   opacity: 0.12;
   filter: saturate(1.1) contrast(1.05);
   pointer-events: none;
@@ -2522,4 +2522,251 @@ span {
 .maintenance-page .card,
 .staff-page .card {
   animation: none;
+}
+
+/* =====================
+   Refactor Design System (2026)
+===================== */
+:root {
+  --ui-radius: 14px;
+  --ui-space-1: 8px;
+  --ui-space-2: 12px;
+  --ui-space-3: 16px;
+  --ui-surface: rgba(255, 255, 255, 0.88);
+  --ui-surface-2: rgba(255, 255, 255, 0.72);
+  --ui-border: rgba(148, 163, 184, 0.45);
+  --ui-text: #0f172a;
+  --ui-text-soft: #475569;
+  --ui-focus: rgba(14, 165, 233, 0.35);
+  --ui-shadow: 0 12px 34px rgba(15, 23, 42, 0.18);
+}
+
+:root[data-theme="dark"] {
+  --ui-surface: rgba(15, 23, 42, 0.78);
+  --ui-surface-2: rgba(15, 23, 42, 0.66);
+  --ui-border: rgba(100, 116, 139, 0.45);
+  --ui-text: #e2e8f0;
+  --ui-text-soft: #cbd5e1;
+  --ui-focus: rgba(56, 189, 248, 0.45);
+  --ui-shadow: 0 20px 42px rgba(2, 6, 23, 0.42);
+}
+
+.ui-input,
+.ui-select,
+.katanga-page input[type="text"],
+.katanga-page input[type="email"],
+.katanga-page input[type="password"],
+.katanga-page select {
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  padding: 11px 14px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 1px 1px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.ui-input:hover,
+.ui-select:hover,
+.katanga-page input[type="text"]:hover,
+.katanga-page input[type="email"]:hover,
+.katanga-page input[type="password"]:hover,
+.katanga-page select:hover {
+  border-color: rgba(14, 165, 233, 0.5);
+}
+
+.ui-input:focus,
+.ui-select:focus,
+.katanga-page input[type="text"]:focus,
+.katanga-page input[type="email"]:focus,
+.katanga-page input[type="password"]:focus,
+.katanga-page select:focus {
+  outline: 2px solid transparent;
+  border-color: rgba(14, 165, 233, 0.65);
+  box-shadow: 0 0 0 3px var(--ui-focus), var(--ui-shadow);
+}
+
+.field-error {
+  min-height: 1.1em;
+  color: #ef4444;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
+.login-page {
+  --glass-bg: rgba(15, 23, 42, 0.38);
+  --glass-border: rgba(226, 232, 240, 0.32);
+  --text-main: #f8fafc;
+  --text-soft: rgba(226, 232, 240, 0.9);
+  --accent: #38bdf8;
+  --accent-strong: #0284c7;
+  --accent-glow: rgba(56, 189, 248, 0.28);
+}
+
+.login-page .video-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.25), transparent 42%),
+    radial-gradient(circle at 90% 10%, rgba(244, 63, 94, 0.15), transparent 38%),
+    linear-gradient(160deg, rgba(2, 6, 23, 0.6), rgba(2, 6, 23, 0.82));
+}
+
+.login-page .logo {
+  width: 88px;
+  filter: drop-shadow(0 8px 20px rgba(2, 6, 23, 0.35));
+}
+
+.login-page .h2 {
+  margin-top: 2px;
+}
+
+.login-page .glass {
+  backdrop-filter: blur(16px) saturate(130%);
+  border-radius: 20px;
+  padding: 24px;
+  width: min(95vw, 840px);
+  max-width: 840px;
+}
+
+.login-page .login-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  margin-bottom: 8px;
+}
+
+.login-page .login-title {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  color: #f8fafc;
+  letter-spacing: 0.08em;
+}
+
+.login-page .login-title::before {
+  content: none;
+}
+
+.theme-toggle {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.45);
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.login-page #loginForm {
+  gap: 14px;
+}
+
+.login-page #loginForm .form-field {
+  gap: 4px;
+}
+
+.login-page #loginForm .form-field.inline-field label,
+.login-page #loginForm label {
+  color: #e2e8f0;
+  text-align: left;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  filter: none;
+}
+
+.login-page #loginForm input[type="text"],
+.login-page #loginForm input[type="email"],
+.login-page #loginForm input[type="password"],
+.login-page #loginForm select {
+  background: rgba(248, 250, 252, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  color: #f8fafc;
+}
+
+.login-page #loginForm input::placeholder {
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.login-page .password-toggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.login-page #loginForm.is-signup {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.login-page #signupFields:not(.hidden) {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.login-page #loginForm input[type="submit"] {
+  grid-column: 1 / -1;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(120deg, #0ea5e9, #0284c7);
+  color: #f8fafc;
+}
+
+.login-page .auth-note {
+  color: #e2e8f0;
+}
+
+.fault-card .icon {
+  width: 92px;
+  height: 92px;
+  border-radius: 18px;
+}
+
+.fault-card .icon::before {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.preview img {
+  width: clamp(96px, 20vw, 160px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.report-images {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+
+.report-images a {
+  min-height: 112px;
+}
+
+@media (max-width: 900px) {
+  .login-page .glass,
+  .login-page .glass.is-signup-mode {
+    width: min(96vw, 640px);
+  }
+
+  .login-page #loginForm.is-signup,
+  .login-page #signupFields:not(.hidden) {
+    grid-template-columns: 1fr;
+  }
+
+  .login-page .login-topbar {
+    flex-direction: column;
+  }
+
+  .login-page .login-title {
+    text-align: center;
+  }
 }

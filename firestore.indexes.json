@@ -2,10 +2,10 @@
   "indexes": [
     {
       "collectionGroup": "reports",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
-          "fieldPath": "faultId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -16,7 +16,7 @@
     },
     {
       "collectionGroup": "reports",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
           "fieldPath": "faultTypes",
@@ -27,30 +27,61 @@
           "order": "DESCENDING"
         }
       ]
-    }
-  ],
-  "fieldOverrides": [
+    },
     {
       "collectionGroup": "reports",
-      "fieldPath": "createdAt",
-      "indexes": [
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
         {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION"
+          "fieldPath": "assignedTechnicianUid",
+          "order": "ASCENDING"
         },
         {
-          "order": "DESCENDING",
-          "queryScope": "COLLECTION"
+          "fieldPath": "status",
+          "order": "ASCENDING"
         },
         {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION_GROUP"
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionId": "maintenanceAssignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "technicianUid",
+          "order": "ASCENDING"
         },
         {
-          "order": "DESCENDING",
-          "queryScope": "COLLECTION_GROUP"
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "assignedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionId": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "approved",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     }
-  ]
+  ],
+  "fieldOverrides": []
 }
