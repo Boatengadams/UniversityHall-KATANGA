@@ -4,6 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   quality:
@@ -28,7 +29,8 @@ jobs:
         run: npm run lint
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    # Run only when manually triggered and secrets are present; skips on normal pushes/PRs
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.FIREBASE_TOKEN != ''
     needs: quality
     runs-on: ubuntu-latest
     steps:
