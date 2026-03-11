@@ -79,7 +79,7 @@
           </div>
 
           <div class="form-field" id="wingWrap">
-            <label for="signupWing">Wing</label>
+            <label for="signupWing">Block</label>
             <select class="ui-select" id="signupWing" name="signupWing"></select>
             <small class="field-error" id="wingError"></small>
           </div>
@@ -123,11 +123,14 @@
           </div>
         </div>
 
-        <div class="form-field inline-field">
+        <div class="form-field inline-field" id="emailField">
           <label for="email">Email</label>
           <input class="ui-input" type="email" id="email" name="email" placeholder="adams@st.knust.edu.gh" required autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
           <small class="field-error" id="emailError"></small>
         </div>
+
+        <p class="login-email-hint hidden" id="loginEmailHint"></p>
+        <button type="button" class="link-button hidden" id="changeEmailButton">Use a different email</button>
 
         <div class="form-field inline-field">
           <label for="password">Password</label>

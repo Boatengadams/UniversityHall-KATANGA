@@ -79,9 +79,8 @@ const toCompressedDataUrl = (file, maxSide = 800, quality = 0.5) => {
 };
 
 if (room && section) {
-  room.addEventListener("change", () => {
-    section.classList.toggle("hidden", room.value === "");
-  });
+  section.classList.remove("hidden");
+  room.addEventListener("change", () => section.classList.remove("hidden"));
 }
 
 if (images && preview) {
@@ -391,7 +390,7 @@ if (auth && (studentName || studentReports || room)) {
         if (room) {
           room.value = currentProfile.room || "";
           room.disabled = true;
-          if (section) section.classList.toggle("hidden", room.value === "");
+          if (section) section.classList.remove("hidden");
         }
       } else {
         currentProfile = null;

@@ -1284,6 +1284,19 @@ const initAllUsers = () => {
 const initPendingUsers = () => {
   if (!pendingUsersDiv) return;
 
+  const canApproveUser = (user = {}) => {
+    if (!currentAdmin) return false;
+    const targetRole = String(user.role || "").trim().toLowerCase();
+    const isStaffTarget = targetRole === "staff";
+    const approverIsAdmin = currentAdmin.isAdmin === true || currentAdmin.isSuperAdmin === true || currentAdmin.claimsAdmin === true;
+    const approverIsScr = currentAdmin.isScrStaff === true;
+    const approverIsStaff = currentAdmin.isStaff === true;
+    if (isStaffTarget && !(approverIsAdmin || approverIsScr)) {
+      return false;
+    }
+    return approverIsAdmin || approverIsScr || approverIsStaff;
+  };
+
   const syncPendingSelectionUi = () => {
     const total = pendingUsersCache.length;
     const selectedCount = selectedPendingUserIds.size;
@@ -1323,7 +1336,7 @@ const initPendingUsers = () => {
       syncPendingSelectionUi();
       return;
     }
-    const canApproveUsers = currentAdmin?.isAdmin === true;
+    const canApproveUsers = currentAdmin?.canApprove === true;
     pendingUsersDiv.innerHTML = users.map(u => `
       <div class="report-card">
         <div class="report-head">
@@ -1354,7 +1367,7 @@ const initPendingUsers = () => {
   };
 
   const approveUsersByIds = async (ids = []) => {
-    if (currentAdmin?.isAdmin !== true) {
+    if (!currentAdmin?.canApprove) {
       alert("You do not have permission to approve users.");
       return;
     }
@@ -1363,10 +1376,16 @@ const initPendingUsers = () => {
     try {
       if (approveSelectedUsersBtn) approveSelectedUsersBtn.disabled = true;
       const writes = await Promise.allSettled(
-        uniqueIds.map((uid) => updateDoc(doc(usersRef, uid), {
-          approved: true,
-          approvedAt: serverTimestamp()
-        }))
+        uniqueIds.map(async (uid) => {
+          const pendingUser = pendingUsersCache.find((u) => u.id === uid);
+          if (!canApproveUser(pendingUser)) {
+            throw new Error("You need SCR or Admin privileges to approve staff accounts.");
+          }
+          return updateDoc(doc(usersRef, uid), {
+            approved: true,
+            approvedAt: serverTimestamp()
+          });
+        })
       );
       let successCount = 0;
       let failedCount = 0;
@@ -1721,7 +1740,9 @@ onAuthStateChanged(auth, async (user) => {
 
   const isSuperAdmin = claimsSuperAdmin || roleSuperAdmin;
   const isAdmin = claimsAdmin || roleAdmin || isScrStaff;
-  if (!isAdmin) {
+  const isStaff = roleValue === "staff";
+  const canApprove = isAdmin || isStaff;
+  if (!isAdmin && !isStaff) {
     await signOut(auth);
     goToLogin();
     return;
@@ -1731,8 +1752,11 @@ onAuthStateChanged(auth, async (user) => {
     uid: user.uid,
     email: user.email || "",
     ...data,
-    role: isSuperAdmin ? "superAdmin" : (isScrStaff ? "scr" : "admin"),
-    isAdmin: true,
+    role: isSuperAdmin ? "superAdmin" : (isScrStaff ? "scr" : roleValue),
+    isAdmin,
+    isStaff,
+    isScrStaff,
+    canApprove,
     isSuperAdmin,
     claimsAdmin,
     claimsSuperAdmin

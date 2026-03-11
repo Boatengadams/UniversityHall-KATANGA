@@ -57,6 +57,9 @@ const email = document.getElementById("email");
 const password = document.getElementById("password");
 const confirmPassword = document.getElementById("confirmPassword");
 const passwordToggle = document.getElementById("passwordToggle");
+const emailField = document.getElementById("emailField");
+const loginEmailHint = document.getElementById("loginEmailHint");
+const changeEmailButton = document.getElementById("changeEmailButton");
 
 const maintenanceTypeWrap = document.getElementById("maintenanceTypeWrap");
 const staffRankWrap = document.getElementById("staffRankWrap");
@@ -75,6 +78,7 @@ let submitBusyStartedAt = 0;
 
 const RATE_LIMIT_KEY = "authRateLimit";
 const MIN_SUBMIT_BUSY_MS = 800;
+const LAST_EMAIL_KEY = "authLastEmail";
 
 const FIELD_ERROR_IDS = {
   fullName: "fullNameError",
@@ -163,7 +167,7 @@ const releaseSubmitBusy = async () => {
 
 const populateWingOptions = () => {
   const wingOptions = getWingOptions();
-  wing.innerHTML = '<option value="">Select Wing</option>' + wingOptions
+  wing.innerHTML = '<option value="">Select Block</option>' + wingOptions
     .map((item) => `<option value="${item.value}">${item.label}</option>`)
     .join("");
 };
@@ -229,7 +233,7 @@ const validateBaseFields = () => {
 
   if (mode === "signup" && isStudentRole()) {
     if (!wing.value) {
-      setFieldError("wing", "Wing is required.");
+      setFieldError("wing", "Block is required.");
       valid = false;
     }
     if (!lane.value) {
@@ -303,6 +307,15 @@ const setMode = (nextMode) => {
 
   if (!signupMode) {
     email.placeholder = "adams@st.knust.edu.gh";
+    const cached = localStorage.getItem(LAST_EMAIL_KEY) || "";
+    if (cached) {
+      email.value = cached;
+      emailField.classList.add("hidden");
+      loginEmailHint.textContent = cached;
+      loginEmailHint.classList.remove("hidden");
+      changeEmailButton.classList.remove("hidden");
+      password.focus();
+    }
   }
 };
 
@@ -408,6 +421,17 @@ if (password && passwordToggle) {
   });
 }
 
+if (changeEmailButton) {
+  changeEmailButton.addEventListener("click", () => {
+    localStorage.removeItem(LAST_EMAIL_KEY);
+    emailField.classList.remove("hidden");
+    loginEmailHint.classList.add("hidden");
+    changeEmailButton.classList.add("hidden");
+    email.value = "";
+    email.focus();
+  });
+}
+
 fullName.addEventListener("input", () => {
   fullName.value = sanitizeName(fullName.value);
   setFieldError("fullName", validateName(fullName.value));
@@ -455,6 +479,11 @@ if (loginForm) {
     }
 
     if (!validateBaseFields()) return;
+
+    if (mode === "login" && !emailField.classList.contains("hidden")) {
+      // If email is still visible, persist it after validation so next visit hides the field
+      localStorage.setItem(LAST_EMAIL_KEY, email.value.trim());
+    }
 
     setSubmitBusy(true);
 
@@ -527,6 +556,10 @@ if (loginForm) {
         clearAuthForm();
         setMode("login");
         return;
+      }
+
+      if (!emailField.classList.contains("hidden")) {
+        localStorage.setItem(LAST_EMAIL_KEY, email.value.trim());
       }
 
       const credential = await loginWithEmailPassword({

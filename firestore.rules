@@ -40,6 +40,22 @@ service cloud.firestore {
         userData().approved == true;
     }
 
+    function staffDoc() {
+      return get(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+
+    function isApproverStaff() {
+      return isSignedIn() &&
+        staffDoc().exists() &&
+        (staffDoc().data.role in ['JCR', 'SCR']);
+    }
+
+    function isSCRApprover() {
+      return isSignedIn() &&
+        staffDoc().exists() &&
+        staffDoc().data.role == 'SCR';
+    }
+
     function validRole(role) {
       return role in ['student', 'maintenance_technician', 'staff', 'admin', 'super_admin'];
     }
@@ -62,7 +78,17 @@ service cloud.firestore {
         request.resource.data.approved == false &&
         nonEmptyString(request.resource.data.name, 2, 120) &&
         nonEmptyString(request.resource.data.email, 5, 120) &&
-        validStudentId(request.resource.data.studentId) &&
+        (
+          (
+            request.resource.data.role == 'student' &&
+            validStudentId(request.resource.data.studentId) &&
+            validStudentEmail(request.resource.data.email)
+          ) ||
+          (
+            request.resource.data.role != 'student' &&
+            nonEmptyString(request.resource.data.idNumber, 1, 40)
+          )
+        ) &&
         request.resource.data.createdAt == request.time;
     }
 
@@ -76,6 +102,25 @@ service cloud.firestore {
         'allowedFaultTypes',
         'createdAt'
       ]) == false;
+    }
+
+    function onlyApprovalFieldsChanged() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'approved',
+        'approvedAt',
+        'approvedBy'
+      ]);
+    }
+
+    function validApprovalUpdate() {
+      return onlyApprovalFieldsChanged() &&
+        request.resource.data.approved is bool &&
+        request.resource.data.approvedBy == request.auth.uid &&
+        (
+          resource.data.staffRank == 'JCR'
+            ? isSCRApprover()
+            : isApproverStaff()
+        );
     }
 
     function validReportCreate(studentUid, roomId) {
@@ -94,13 +139,28 @@ service cloud.firestore {
       allow create: if isSignedIn() && validUserCreate(uid);
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdminRole());
 
-      allow update: if isAdminRole() || (
+      allow update: if (
+        isApproverStaff() &&
+        validApprovalUpdate()
+      ) || (
+        isAdminRole() &&
+        request.resource.data.diff(resource.data).changedKeys().hasAny([
+          'approved',
+          'approvedAt',
+          'approvedBy'
+        ]) == false
+      ) || (
         isSignedIn() &&
         request.auth.uid == uid &&
         validSelfUserUpdate()
       );
 
       allow delete: if isAdminRole();
+    }
+
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if false;
     }
 
     match /rooms/{roomId} {
